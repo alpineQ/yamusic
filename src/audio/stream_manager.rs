@@ -1,4 +1,5 @@
 use crate::audio::cache::UrlCache;
+use crate::audio::disk_cache;
 use crate::audio::progress::TrackProgress;
 use crate::http::ApiService;
 use crate::stream;
@@ -48,6 +49,16 @@ impl StreamManager {
         &self,
         track: &Track,
     ) -> color_eyre::Result<(stream::StreamingSession, Arc<TrackProgress>)> {
+        if let Some((path, codec)) = disk_cache::cached_path(&track.id) {
+            let progress = Arc::new(TrackProgress::new());
+            let progress_clone = progress.clone();
+            let session = tokio::task::spawn_blocking(move || {
+                stream::create_file_session(path, codec, progress_clone)
+            })
+            .await??;
+            return Ok((session, progress));
+        }
+
         {
             let mut cache = self.prewarm_cache.lock().unwrap();
             if let Some((session, progress)) = cache.remove(&track.id) {
@@ -78,6 +89,47 @@ impl StreamManager {
         .await??;
 
         Ok((session, progress))
+    }
+
+    pub fn cache_to_disk(&self, track: Track) {
+        if disk_cache::is_cached(&track.id) {
+            return;
+        }
+
+        let this = self.clone();
+        tokio::spawn(async move {
+            let resolved = if let Some(entry) = this.url_cache.get(&track.id) {
+                Some(entry)
+            } else {
+                match this.api.fetch_track_url(track.id.clone()).await {
+                    Ok((url, codec, bitrate)) => {
+                        this.url_cache
+                            .insert(track.id.clone(), url.clone(), codec.clone(), bitrate);
+                        Some((url, codec, bitrate))
+                    }
+                    Err(e) => {
+                        tracing::warn!("disk cache: url fetch failed for {}: {e}", track.id);
+                        None
+                    }
+                }
+            };
+
+            let Some((url, codec, _bitrate)) = resolved else {
+                return;
+            };
+
+            let client = this.http_client.clone();
+            let bytes = tokio::task::spawn_blocking(move || {
+                client.get(&url).send().and_then(|r| r.bytes())
+            })
+            .await;
+
+            match bytes {
+                Ok(Ok(bytes)) => disk_cache::write(&track, &codec, &bytes),
+                Ok(Err(e)) => tracing::warn!("disk cache: download failed for {}: {e}", track.id),
+                Err(e) => tracing::warn!("disk cache: join failed for {}: {e}", track.id),
+            }
+        });
     }
 }
 

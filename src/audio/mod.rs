@@ -1,6 +1,7 @@
 pub mod cache;
 pub mod commands;
 pub mod controller;
+pub mod disk_cache;
 pub mod enums;
 pub mod error;
 pub mod fx;

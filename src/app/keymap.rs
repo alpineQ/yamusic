@@ -73,6 +73,7 @@ pub enum PlaybackIntent {
     VolumeUp(u8),
     VolumeDown(u8),
     ToggleMute,
+    CacheCurrent,
     ToggleShuffle,
     CycleRepeat,
     Like(Target),
@@ -252,6 +253,7 @@ fn build_global_keymap() -> Keymap {
             KeySeq::chord(Char('c'), Char('d')),
             Playback(Dislike(Current)),
         ),
+        (KeySeq::chord(Char('c'), Char('s')), Playback(CacheCurrent)),
         (KeySeq::chord(Char('v'), Char('f')), View(ViewIntent::Like)),
         (
             KeySeq::chord(Char('v'), Char('d')),

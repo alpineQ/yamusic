@@ -4,7 +4,10 @@ use crossbeam_channel::{
     Receiver as CbReceiver, Sender as CbSender, TryRecvError, bounded as cb_bounded, select,
 };
 use rodio::{Decoder, Source};
+use std::fs::File;
+use std::io::{Read, Seek};
 use std::num::NonZero;
+use std::path::PathBuf;
 use std::sync::{
     Arc,
     atomic::{AtomicU64, Ordering},
@@ -190,6 +193,35 @@ pub fn create_streaming_session(
         .build()
         .map_err(|err| eyre!(err))?;
 
+    spawn_session(decoder, progress)
+}
+
+pub fn create_file_session(
+    path: PathBuf,
+    codec: String,
+    progress: Arc<TrackProgress>,
+) -> Result<StreamingSession> {
+    let file = File::open(&path)?;
+    let total_bytes = file.metadata()?.len();
+    progress.set_total_bytes(total_bytes);
+    progress.set_buffered_bytes(total_bytes);
+
+    let decoder = Decoder::builder()
+        .with_data(file)
+        .with_hint(codec.as_str())
+        .with_byte_len(total_bytes)
+        .with_coarse_seek(true)
+        .with_gapless(true)
+        .build()
+        .map_err(|err| eyre!(err))?;
+
+    spawn_session(decoder, progress)
+}
+
+fn spawn_session<R: Read + Seek + Send + 'static>(
+    decoder: Decoder<R>,
+    progress: Arc<TrackProgress>,
+) -> Result<StreamingSession> {
     let sample_rate = decoder.sample_rate();
     let channels = decoder.channels();
     let total_duration = decoder.total_duration();
@@ -234,8 +266,8 @@ pub fn create_streaming_session(
     Ok(StreamingSession { source, controller })
 }
 
-fn run_decode_loop(
-    mut decoder: Decoder<StreamingDataSource>,
+fn run_decode_loop<R: Read + Seek + Send + 'static>(
+    mut decoder: Decoder<R>,
     sample_tx: CbSender<SampleMessage>,
     cmd_rx: CbReceiver<DecoderCommand>,
     generation: Arc<AtomicU64>,
