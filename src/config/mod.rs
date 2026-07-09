@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use directories::ProjectDirs;
@@ -16,6 +17,8 @@ pub enum CacheMode {
 #[serde(default)]
 pub struct Config {
     pub cache: CacheMode,
+    #[serde(rename = "cache-dir")]
+    pub cache_dir: Option<String>,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -30,6 +33,24 @@ pub fn get() -> &'static Config {
 
 pub fn cache_mode() -> CacheMode {
     get().cache
+}
+
+pub fn cache_dir() -> PathBuf {
+    if let Some(dir) = get().cache_dir.as_deref() {
+        return expand_tilde(dir);
+    }
+    ProjectDirs::from("", "", env!("CARGO_PKG_NAME"))
+        .map(|d| d.cache_dir().to_path_buf())
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn expand_tilde(path: &str) -> PathBuf {
+    if let Some(rest) = path.strip_prefix("~/")
+        && let Some(home) = std::env::var_os("HOME")
+    {
+        return PathBuf::from(home).join(rest);
+    }
+    PathBuf::from(path)
 }
 
 fn load() -> Option<Config> {
@@ -62,5 +83,12 @@ mod tests {
     fn defaults_to_hotkey() {
         let cfg: Config = toml::from_str("").unwrap();
         assert_eq!(cfg.cache, CacheMode::Hotkey);
+        assert_eq!(cfg.cache_dir, None);
+    }
+
+    #[test]
+    fn parses_cache_dir() {
+        let cfg: Config = toml::from_str("cache-dir = \"/mnt/data4/.yamusic\"").unwrap();
+        assert_eq!(cfg.cache_dir.as_deref(), Some("/mnt/data4/.yamusic"));
     }
 }
