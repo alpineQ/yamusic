@@ -76,18 +76,18 @@ impl AudioController {
                         continue;
                     }
 
+                    let pos = engine.pos();
+                    let dur = signals.duration_ms.get();
+
+                    signals.update_progress(pos.as_millis() as u64, dur);
+
+                    if let Ok(guard) = progress.read() {
+                        guard.set_current_position(pos);
+                        let buffered = guard.get_buffered_ratio() as f32;
+                        signals.update_buffered_ratio(buffered);
+                    }
+
                     if signals.monitor.is_focused() {
-                        let pos = engine.pos();
-                        let dur = signals.duration_ms.get();
-
-                        signals.update_progress(pos.as_millis() as u64, dur);
-
-                        if let Ok(guard) = progress.read() {
-                            guard.set_current_position(pos);
-                            let buffered = guard.get_buffered_ratio() as f32;
-                            signals.update_buffered_ratio(buffered);
-                        }
-
                         signals.amplitude.set(signals.monitor.combined_amplitude());
                     }
                 }
