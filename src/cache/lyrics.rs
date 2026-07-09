@@ -1,7 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
 
-use directories::ProjectDirs;
 use serde::Serialize;
 
 use crate::util::lrc::parse_lrc;
@@ -15,7 +14,7 @@ struct LyricLine {
 }
 
 fn lyrics_dir() -> Option<PathBuf> {
-    ProjectDirs::from("", "", env!("CARGO_PKG_NAME")).map(|d| d.cache_dir().join(".lyrics"))
+    Some(crate::config::cache_dir().join(".lyrics"))
 }
 
 pub fn write_synced(track_id: &str, lrc: &str) {
