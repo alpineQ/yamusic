@@ -271,6 +271,13 @@ impl App {
                 let mut audio = self.audio.write().await;
                 audio.wave_update_buffer(tracks);
             }
+            Event::Resume => self.audio.write().await.resume().await,
+            Event::Pause => self.audio.write().await.pause().await,
+            Event::Next => self.audio.write().await.play_next().await,
+            Event::Previous => self.audio.write().await.play_previous().await,
+            Event::Seek(ms) => self.audio.write().await.seek_to_ms(ms as u64).await,
+            Event::Volume(v) => self.audio.write().await.set_volume(v),
+            Event::ToggleMute => self.audio.write().await.toggle_mute(),
             _ => {}
         }
     }
