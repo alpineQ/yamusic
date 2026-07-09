@@ -43,9 +43,16 @@ impl LyricsSignals {
 
                     tracing::debug!("Fetching lyrics for track: {} ({})", track.id, format);
 
+                    let track_id = track.id.clone();
+                    let is_lrc = matches!(format, LyricsFormat::LRC);
                     match api.fetch_lyrics(track.id, format).await {
                         Ok(lyrics) => {
                             tracing::debug!("Fetched lyrics: {:?}", lyrics.is_some());
+                            if is_lrc {
+                                if let Some(text) = &lyrics {
+                                    crate::cache::lyrics::write_synced(&track_id, text);
+                                }
+                            }
                             Ok(lyrics)
                         }
                         Err(e) => {
