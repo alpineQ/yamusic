@@ -120,6 +120,7 @@ impl AudioController {
         let event_tx = self.event_tx.clone();
         let signals = self.signals.clone();
         let track_clone = track.clone();
+        let cache_track = track.clone();
         let monitor = self.signals.monitor.clone();
         let effect_handles_store = self.effect_handles.clone();
 
@@ -186,6 +187,10 @@ impl AudioController {
                     signals.set_playing(true);
 
                     let _ = event_tx.send(Event::TrackStarted(track_clone, 0));
+
+                    if crate::config::cache_mode() == crate::config::CacheMode::Auto {
+                        stream_manager.cache_to_disk(cache_track);
+                    }
                 }
                 Err(_e) => {
                     signals.is_buffering.set(false);
@@ -232,6 +237,10 @@ impl AudioController {
         if let Ok(progress) = self.track_progress.read() {
             progress.set_current_position(pos);
         }
+    }
+
+    pub fn cache_track(&self, track: Track) {
+        self.stream_manager.cache_to_disk(track);
     }
 
     pub fn get_effect_handles(&self) -> Arc<RwLock<HashMap<String, EffectHandle>>> {

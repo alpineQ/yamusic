@@ -339,6 +339,9 @@ impl App {
                 let mut audio = self.audio.write().await;
                 audio.toggle_mute();
             }
+            Action::CacheCurrentTrack => {
+                self.audio.read().await.cache_current_track();
+            }
             Action::ToggleShuffle => {
                 let mut audio = self.audio.write().await;
                 audio.toggle_shuffle();
@@ -1097,6 +1100,7 @@ impl App {
                 Action::SetVolume(vol.saturating_sub(n))
             }
             PlaybackIntent::ToggleMute => Action::ToggleMute,
+            PlaybackIntent::CacheCurrent => Action::CacheCurrentTrack,
             PlaybackIntent::ToggleShuffle => Action::ToggleShuffle,
             PlaybackIntent::CycleRepeat => Action::CycleRepeat,
             PlaybackIntent::Like(Target::Current) => self

@@ -44,6 +44,7 @@ async fn resolve_and_verify_token()
 fn setup() -> color_eyre::Result<()> {
     color_eyre::install()?;
     dotenv::dotenv().ok();
+    yamusic::config::init();
     set_panic_hook();
     initialize_logging()
 }

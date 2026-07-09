@@ -359,6 +359,12 @@ impl AudioSystem {
         self.controller.toggle_mute();
     }
 
+    pub fn cache_current_track(&self) {
+        if let Some(track) = self.signals.current_track.get() {
+            self.controller.cache_track(track);
+        }
+    }
+
     pub fn toggle_repeat_mode(&mut self) {
         self.queue.toggle_repeat_mode();
     }

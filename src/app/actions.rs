@@ -25,6 +25,7 @@ pub enum Action {
     SeekBackward(u64),
     SetVolume(u8),
     ToggleMute,
+    CacheCurrentTrack,
     ToggleShuffle,
     CycleRepeat,
     LikeTrack(Track),

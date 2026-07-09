@@ -3,4 +3,6 @@ mod data_source;
 mod pcm;
 
 pub use self::data_source::StreamingDataSource;
-pub use self::pcm::{StreamController, StreamingSession, create_streaming_session};
+pub use self::pcm::{
+    StreamController, StreamingSession, create_file_session, create_streaming_session,
+};
