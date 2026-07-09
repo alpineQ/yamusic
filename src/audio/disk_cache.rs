@@ -1,12 +1,10 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use yandex_music::model::track::Track;
 
 use crate::config;
-
-const KNOWN_EXTS: &[&str] = &["mp3", "aac", "m4a", "flac", "opus", "ogg", "wav"];
 
 #[derive(Serialize, Deserialize)]
 pub struct TrackMeta {
@@ -30,11 +28,24 @@ pub fn cached_path(track_id: &str) -> Option<(PathBuf, String)> {
     if !valid_id(track_id) {
         return None;
     }
-    let dir = cache_dir()?;
-    for ext in KNOWN_EXTS {
-        let path = dir.join(format!("{track_id}.{ext}"));
-        if path.is_file() {
-            return Some((path, (*ext).to_string()));
+    find_audio(&cache_dir()?, track_id)
+}
+
+// Any `<id>.<codec>` file counts (the Yandex codec string becomes the ext,
+// e.g. `aac-mp4`), except the `.meta.json` sidecar and in-flight `.tmp`.
+fn find_audio(dir: &Path, track_id: &str) -> Option<(PathBuf, String)> {
+    let prefix = format!("{track_id}.");
+    for entry in fs::read_dir(dir).ok()?.flatten() {
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        let Some(ext) = name.strip_prefix(&prefix) else {
+            continue;
+        };
+        if ext.is_empty() || ext == "meta.json" || ext.ends_with(".tmp") {
+            continue;
+        }
+        if entry.path().is_file() {
+            return Some((entry.path(), ext.to_string()));
         }
     }
     None
@@ -86,5 +97,28 @@ pub fn write(track: &Track, codec: &str, bytes: &[u8]) {
         {
             let _ = fs::remove_file(&meta_tmp);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn find_audio_matches_codec_ext_and_skips_sidecars() {
+        let dir = std::env::temp_dir().join(format!("yamusic-dc-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        fs::write(dir.join("42.meta.json"), b"{}").unwrap();
+        fs::write(dir.join("42.aac-mp4.tmp"), b"x").unwrap();
+        assert!(find_audio(&dir, "42").is_none());
+
+        fs::write(dir.join("42.aac-mp4"), b"x").unwrap();
+        let (path, ext) = find_audio(&dir, "42").unwrap();
+        assert_eq!(ext, "aac-mp4");
+        assert!(path.ends_with("42.aac-mp4"));
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }
