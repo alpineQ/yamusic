@@ -317,6 +317,20 @@ impl AudioSystem {
         self.controller.handle_command(AudioCommand::Stop).await;
     }
 
+    pub async fn pause(&mut self) {
+        self.controller.handle_command(AudioCommand::Pause).await;
+    }
+
+    pub async fn resume(&mut self) {
+        self.controller.handle_command(AudioCommand::Resume).await;
+    }
+
+    pub async fn seek_to_ms(&mut self, ms: u64) {
+        self.controller
+            .handle_command(AudioCommand::Seek(std::time::Duration::from_millis(ms)))
+            .await;
+    }
+
     pub fn set_volume(&mut self, volume: u8) {
         self.controller.set_volume_u8(volume);
     }

@@ -6,5 +6,6 @@ pub mod cache;
 pub mod event;
 pub mod framework;
 pub mod http;
+pub mod mpris;
 pub mod stream;
 pub mod util;

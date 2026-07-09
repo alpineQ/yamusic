@@ -17,6 +17,7 @@ async fn main() -> color_eyre::Result<()> {
     let api = Arc::new(ApiService::new("".to_string(), Some(client), Some(user_id)).await?);
 
     let audio = AudioSystem::new(event_tx.clone(), api.clone()).await?;
+    yamusic::mpris::spawn(audio.signals().clone(), event_tx.clone());
     let mut app = App::new(audio, api, event_tx, event_rx).await?;
     app.run().await
 }
