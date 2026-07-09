@@ -1,9 +1,10 @@
 use std::fs;
 use std::path::PathBuf;
 
-use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use yandex_music::model::track::Track;
+
+use crate::config;
 
 const KNOWN_EXTS: &[&str] = &["mp3", "aac", "m4a", "flac", "opus", "ogg", "wav"];
 
@@ -18,7 +19,7 @@ pub struct TrackMeta {
 }
 
 fn cache_dir() -> Option<PathBuf> {
-    ProjectDirs::from("", "", env!("CARGO_PKG_NAME")).map(|d| d.cache_dir().to_path_buf())
+    Some(config::cache_dir())
 }
 
 fn valid_id(track_id: &str) -> bool {
