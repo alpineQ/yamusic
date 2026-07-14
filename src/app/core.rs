@@ -21,7 +21,8 @@ use im::Vector;
 use super::{
     actions::{Action, Route},
     components::{
-        Lyrics, PlayerBar, PlayerSignals, Sidebar, ToastManager, Visualizer, tick_global,
+        Lyrics, PlayerBar, PlayerSignals, Sidebar, ToastManager, Visualizer, WaveCover,
+        tick_global,
     },
     data::{
         AlbumTracksSource, ArtistTracksSource, LikedTracksSource, PlaylistDataSource,
@@ -51,6 +52,7 @@ pub struct App {
     event_rx: Receiver<Event>,
     player_bar: PlayerBar,
     visualizer: Visualizer,
+    wave_cover: WaveCover,
     lyrics: Lyrics,
     sidebar: Sidebar,
     sidebar_visible: bool,
@@ -146,6 +148,7 @@ impl App {
         );
 
         let lyrics = Lyrics::new(signals.lyrics.clone(), signals.audio.position_ms.clone());
+        let wave_cover = WaveCover::new(signals.audio.current_cover_url.clone());
 
         let wave_state = WaveSessionState::new(api.clone(), event_tx.clone());
         let search_state = SearchState::new();
@@ -189,6 +192,7 @@ impl App {
             current_route: Route::Home,
             key_resolver: KeyResolver::new(),
             visualizer,
+            wave_cover,
             lyrics,
             toast_manager: ToastManager::new(),
             effects_overlay: EffectsOverlay::new(effect_handles),
@@ -1309,8 +1313,24 @@ impl App {
         match &self.current_route {
             Route::Home => {
                 self.visualizer.set_full_blocks(popup_open);
+                self.wave_cover.prepare();
+                let lyric = if popup_open {
+                    None
+                } else {
+                    self.lyrics.current_line()
+                };
+                let cover = if popup_open {
+                    None
+                } else {
+                    self.wave_cover.image_rect(content_area, lyric.is_some())
+                };
+                self.visualizer.set_cover_hole(cover);
                 if self.signals.is_focused.get() {
                     self.visualizer.view(frame, content_area);
+                }
+                if !popup_open {
+                    self.wave_cover
+                        .render(frame, content_area, cover, lyric.as_deref());
                 }
                 self.home_view.view(frame, content_area);
             }
