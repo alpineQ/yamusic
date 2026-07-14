@@ -37,6 +37,31 @@ impl Lyrics {
         let widget = LyricsWidget::new(&lines, self.position.get());
         frame.render_widget(widget, area);
     }
+
+    pub fn current_line(&self) -> Option<String> {
+        let lines = self.lines.get();
+        if lines.is_empty() {
+            return None;
+        }
+        let pos = self.position.get();
+        if pos < lines[0].0 {
+            return None;
+        }
+        let mut idx = 0usize;
+        for (i, (t, _)) in lines.iter().enumerate() {
+            if *t <= pos {
+                idx = i;
+            } else {
+                break;
+            }
+        }
+        let text = &lines[idx].1;
+        if text.is_empty() {
+            None
+        } else {
+            Some(text.clone())
+        }
+    }
 }
 
 struct LyricsWidget<'a> {

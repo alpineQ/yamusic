@@ -9,6 +9,7 @@ mod sidebar;
 mod spinner;
 mod toast;
 mod visualizer_gpu;
+mod wave_cover;
 pub mod widgets;
 
 pub use sidebar::Sidebar;
@@ -24,3 +25,4 @@ pub use progress::{AudioProgressBar, ProgressBar};
 pub use spinner::{Spinner, tick_global};
 pub use toast::ToastManager;
 pub use visualizer_gpu::Visualizer;
+pub use wave_cover::WaveCover;

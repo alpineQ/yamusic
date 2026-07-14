@@ -337,6 +337,7 @@ struct VisualizerState {
     like_glow_target: f32,
     like_glow_smoothed: f32,
     use_full_blocks: bool,
+    cover_hole: Option<Rect>,
     shared_params: Arc<Mutex<SharedVisualizerParams>>,
     latest_frame: Arc<Mutex<Option<RenderResult>>>,
 }
@@ -454,6 +455,7 @@ impl Visualizer {
                 like_glow_target: 0.0,
                 like_glow_smoothed: 0.0,
                 use_full_blocks: false,
+                cover_hole: None,
                 shared_params,
                 latest_frame,
             }),
@@ -463,6 +465,12 @@ impl Visualizer {
     pub fn set_full_blocks(&self, enabled: bool) {
         if let Ok(mut state) = self.state.lock() {
             state.use_full_blocks = enabled;
+        }
+    }
+
+    pub fn set_cover_hole(&self, hole: Option<Rect>) {
+        if let Ok(mut state) = self.state.lock() {
+            state.cover_hole = hole;
         }
     }
 
@@ -628,13 +636,22 @@ impl Widget for &Visualizer {
             && frame.data.len() == width * height
         {
             let use_full_blocks = state.use_full_blocks;
+            let hole = state.cover_hole;
             for y in 0..height {
                 for x in 0..width {
+                    let cx = area.left() + x as u16;
+                    let cy = area.top() + y as u16;
+                    if let Some(h) = hole
+                        && cx >= h.left()
+                        && cx < h.right()
+                        && cy >= h.top()
+                        && cy < h.bottom()
+                    {
+                        continue;
+                    }
                     let idx = y * width + x;
                     let ((r_top, g_top, b_top), (r_bot, g_bot, b_bot)) = frame.data[idx];
-                    if let Some(cell) =
-                        buf.cell_mut((area.left() + x as u16, area.top() + y as u16))
-                    {
+                    if let Some(cell) = buf.cell_mut((cx, cy)) {
                         if use_full_blocks {
                             let wave_factor = 0.20_f32;
                             let blend_toward_bg = |c: u8, bg: u8| -> u8 {
